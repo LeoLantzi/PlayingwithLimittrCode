@@ -605,8 +605,8 @@ String Build_Packet(float glucose) {
       String packet = "";
       packet = String(raw);
       packet += ' ';
-      if (noDiffCount > 0) packet += "205"; //warning for expird sensor 205 on xdrip means that sender battery is low, maybe find better error code
-      if (noDiffCount == 0) packet += "216";
+      if (noDiffCount > 0) packet += "205"; //warning for expird sensor. Dont understand the xdrip code 205,206,209 all result in low transmitter battery. But at least a message.
+      if (noDiffCount == 0) packet += "216"; //     sensor_battery_level = 216; //no message, just system status "OK"
       packet += ' ';
 //if (noDiffCount > 0) batteryPcnt = batteryPcnt*100; //warning for expird sensor
       packet += String(batteryPcnt);
