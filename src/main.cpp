@@ -45,8 +45,8 @@ const int NFCPin3 = 4; // Power pin BM019
 
 const int BLEPin = 3; // BLE power pin.
 const int BLEState = 2; // BLE connection state pin
-const int BLE_RX = 6; //!!!!!!!!!!!!!!!!! 5
-const int BLE_TX = 5;//!!!!!!!!!!!!!!!!!! 6
+const int BLE_RX = 5; //!!!!!!!!!!!!!!!!! 5
+const int BLE_TX = 6;//!!!!!!!!!!!!!!!!!! 6
 
 
 bool startHM17() ;//schaltet pins, wartet auf connection
@@ -63,7 +63,7 @@ bool BM019 =false;
 int ERROR_READS; //How many error tries occured, higher longer sleep
 String sendAT(char ); // function to send AT commands to BLE chip
 
-
+//NFC Antenna http://www.antenna-theory.com/definitions/nfc-antenna.php
 
 byte RXBuffer[24];
 byte NFCReady = 0;  // used to track NFC state
@@ -204,6 +204,13 @@ ble_Seril.begin(9600);
 
 //sendAT("AT+VERS?");
     if(FirstRunHM17 == true){
+      //ok hm11 chips needs bit more time than hm17, so 2 more wakeups and a delay
+      sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+      delay(100);
+      sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+
+      sendAT("AT+VERS?");
+      sendAT("AT+VERR?");
       sendAT("AT+NAMELeonhard");
       sendAT("AT+PIO11"); // on connection BLEState durable light not blinking
 
@@ -216,9 +223,13 @@ ble_Seril.begin(9600);
 delay(10);
           Serial.print("Waiting for BLE connection ...");
           Serial.println("");
-          //LL find power save mode to keep ble power pin up, but atmel down.
+          //LL  power save mode to keep ble power pin up, but atmel down.
           goToSleep( 1); // 8 Seconds * MAX_BLE_WAITx8 = Seconds
         //  delay(1000);
+        //with HM-11 8,5mA with HM17 5,05mA while waiting
+        //bonding/pairing neither HM11 or HM17 working for me
+        //HM11: HMSoft V545
+
 
 if (i_wakeup>=MAX_BLE_WAITx8) return false;
         }
