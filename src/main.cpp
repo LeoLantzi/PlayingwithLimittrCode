@@ -247,12 +247,12 @@ bool SetProtocol_Command() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  while(RXBuffer[0] != 8)
+
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
   }
-
   digitalWrite(SSPin, HIGH);
   delay(1);
 
@@ -294,11 +294,13 @@ bool Inventory_Command() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  while(RXBuffer[0] != 8)
-    {
-    RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
-    RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+
+     for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
+       {
+       RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
+       RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
      }
+
   digitalWrite(SSPin, HIGH);
   delay(1);
 
@@ -358,14 +360,12 @@ float Read_Memory() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  int RXBuffer_counter = 0;
-  while(RXBuffer[0] != 8)
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
-    RXBuffer_counter++; //LL  occured to me when D9 no good connection
-    if (RXBuffer_counter >= 10000000) {      return false;       }
   }
+
   digitalWrite(SSPin, HIGH);
   delay(1);
 
@@ -415,13 +415,10 @@ float Read_Memory() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  int RXBuffer_counter = 0;
-  while(RXBuffer[0] != 8)
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
-    RXBuffer_counter++; //LL  occured to me when D9 no good connection
-    if (RXBuffer_counter >= 10000000) {      return false;       }
   }
   digitalWrite(SSPin, HIGH);
   delay(1);
