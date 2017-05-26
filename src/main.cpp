@@ -30,7 +30,7 @@
 
 #define MIN_V 3150 // battery empty level
 #define MAX_V 3850 // battery full level
-#define MAX_BLE_WAITx8 4 // Maximum bluetooth re-connect time 4x8=32+ seconds
+#define MAX_BLE_WAITx8 5 // Maximum bluetooth re-connect time 4x8=32+ seconds
 #define SLEEP_TIME 37 // SleepTime in 37x8 seconds = 4 min 56 seconds
 #define MAX_NFC_READTRIES 2 // Amount of tries for every nfc block-scan
 
@@ -197,22 +197,70 @@ bool startHM17() {
   delay(100);
 
 ble_Seril.begin(9600);
-ble_Seril.begin(9600);
-    sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
-    delay(100);
-    sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+//ble_Seril.begin(9600);
+    //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+  //  delay(100);
+    //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
 
 //sendAT("AT+VERS?");
     if(FirstRunHM17 == true){
       //ok hm11 chips needs bit more time than hm17, so 2 more wakeups and a delay
-      sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
-      delay(100);
-      sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+    //  sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+    //  delay(100);
+      //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
 
       sendAT("AT+VERS?");
       sendAT("AT+VERR?");
-      sendAT("AT+NAMELeonhard");
+      sendAT("AT+NAME?");
+      String HM_Name = sendAT("AT+NAME?");
+      if(!HM_Name.startsWith("OK+NAME:Leonhard")) {
+              sendAT("AT+RENEW");
+              sendAT("AT+RESET");
+              delay(500);
+              digitalWrite(BLEPin, LOW);
+              delay(500);
+              digitalWrite(BLEPin, HIGH);
+              delay(100);
+              sendAT("AT+VERS?");
+              sendAT("AT+VERR?");
+              sendAT("AT+NAME?");
+              sendAT("AT+NAMELeonhard");
+          }
+
       sendAT("AT+PIO11"); // on connection BLEState durable light not blinking
+
+
+      // 45. Query/Set Module Power
+      // Send Receive Parameter
+      // AT+POWE? OK+Get:<P1> None
+      // AT+POWE <P1> OK+Set:<P1> Para: 0 ~ 7
+      // 0: -18dbm
+      // 1: -12dbm
+      // 2: -6dbm
+      // 3: -3dbm
+      // 4: -2dbm
+      // 5: -1dbm
+      // 6: 0dbm
+      // 7: 3dbm
+      // Default: 6
+      sendAT("AT+POWE3");
+      // 46. Query/Set reliable advertising mode
+      // Send Receive Parameter
+      // AT+RELI? OK+ Get:<P1>
+      // AT+RELI<P1> OK+ Set:<P1>
+      // Para1: 0, 1
+      // 0: Normal advertising
+      // 1: Reliable advertising
+      // Default: 0
+      //       52. Query/Set BLE talk method
+// Send Receive Parameter
+// AT+RESP? OK+Get:<P1> None
+// AT+RESP<P1> OK+Set:<P1> Para1: 0, 1, 2
+// 0: Writewithoutresponse
+// 1: Writewithresponse
+// 2: Both 0 and 1
+// Default: 0
+sendAT("AT+RESP1");
 
       FirstRunHM17 = false;
     }
@@ -233,7 +281,8 @@ delay(10);
 
 if (i_wakeup>=MAX_BLE_WAITx8) return false;
         }
-        return true;
+      if(digitalRead(BLEState) != HIGH)  return false;
+      return true;
 }
 
 bool endHM17(){
@@ -655,7 +704,10 @@ bool Send_Packet(String packet) {
       Serial.print(packet);
       Serial.println("");
       ble_Seril.print(packet);
-      delay(1000);//LL20 von 1000
+      //delay(1000);//LL20 von 1000
+      //LL26 just have to wait for ble to finish transaction or implement an sophisticated way to wait for ack,which would need an powered up atml.
+      LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
+
       return true;
     }
    else
@@ -825,7 +877,7 @@ else{ // HM17==true
 }
 
 
-    if(batteryPcnt<=70) digitalWrite(14, HIGH);
+
     //if(batteryPcnt<=80) digitalWrite(14, LOW);
 
 if(RC==true) { // if current try was ok, to to sleep for normal ca 5min
