@@ -194,6 +194,7 @@ void restartBLE() {
     ble_Seril.write("AT+RESET");
     delay(500);
 }
+bool testhm17=false;
 void setupHM17(){
   sendAT("","AT+VERS?");
   sendAT("","AT+VERR?");
@@ -232,6 +233,10 @@ sendAT("","AT+PIO1?");
                 // Default: 6
                 sendAT("","AT+RELI?");
                 sendAT("","AT+RELI0");
+                sendAT("","AT+PASS?");
+sendAT("","AT+PASS000000");
+                sendAT("","AT+PASS?");
+
                 // 46. Query/Set reliable advertising mode
                 // Send Receive Parameter
                 // AT+RELI? OK+ Get:<P1>
@@ -261,6 +266,7 @@ sendAT("","AT+PIO1?");
           // setting.
           // Default: 1
           sendAT("", "AT+PWRM?");
+          sendAT("","AT+PASS?");
 
 //}
 sendAT("","AT+RESET");
@@ -272,68 +278,46 @@ delay(100);
 sendAT("","AT+RESET");
 }
 bool startHM17() {
-  // const int BLEPin = 3; // BLE power pin.
-  // const int BLEState = 2; // BLE connection state pin
-  // const int BLE_RX = 5;
-  // const int BLE_TX = 6;
-  //endHM17(); // strange i know
-  //endHM17();
  Serial.println("startHM17");
+ endHM17();
   restartBLE();
   //LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
-
-//ble_Seril.begin(9600);
+if(testhm17==true)setupHM17();
 ble_Seril.begin(9600);
 sendAT("","AT+RESET");
- String ble_answer_2 = sendAT("","AT+NAME?");
- String Wakeup_Answer = sendAT("","AT");
+ String ble_NameResponse = sendAT("","AT+NAME?");
+  String ble_ConnectedResponse = sendAT("","AT");
+  if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return true; // Already setup AND responsive
 // delay(100);
-for(int i= 0; !ble_answer_2.startsWith("OK") && i <= 40; i++) {
+for(int i= 0; !ble_NameResponse.startsWith("OK") && i <= 40; i++) {
+  Serial.print("Waiting for BLE OK ...");
 sendAT("","AT+RESET");
-delay(500);
+delay(100);
 digitalWrite(BLEPin, LOW);
-delay(1000);
-           //LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
-
+           LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
            digitalWrite(BLEPin, HIGH);
-sendAT("","AT");
-           delay(1000);
-      ble_answer_2 = sendAT("","AT+NAME?");
-
+delay(500);
+      ble_NameResponse = sendAT("","AT+NAME?");
+      ble_NameResponse = sendAT("","AT+NAME?");
+      ble_ConnectedResponse = sendAT("","AT");
+if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return true; // Already setup AND responsive
           }
 
-Wakeup_Answer =sendAT("","AT");
-    if(ble_answer_2.startsWith("OK+Get:xxx") || ble_answer_2.startsWith("OK+GET:HMSoft") || ble_answer_2.startsWith("OK+Get:HMSoft")){
-  setupHM17();
-          }
+    if( ble_NameResponse!= "OK+Get:Leonhard" ){  setupHM17();          }
 
-      FirstRunHM17 = false;
-
-
-    int i_wakeup=0;
-    //at the momemt probs with light state
-        for (i_wakeup=0; (Wakeup_Answer != "OK") && (digitalRead(BLEState) != HIGH)   &&  (i_wakeup < MAX_BLE_WAITx8) ; i_wakeup++)
+        int i_wakeup=0;
+          for (i_wakeup=0; (ble_ConnectedResponse != "OK") && (digitalRead(BLEState) != HIGH)   &&  (i_wakeup < 100) ; i_wakeup++)
         {
-delay(10);
          Serial.print("Waiting for BLE connection ...");
-         Serial.println("");
-
-          //LL  power save mode to keep ble power pin up, but atmel down.
-          goToSleep( 1); // 8 Seconds * MAX_BLE_WAITx8 = Seconds
-        // delay(500);
-        //with HM-11 8,5mA with HM17 5,05mA while waiting
-        //bonding/pairing neither HM11 or HM17 working for me
-        //HM11: HMSoft V545
-
-        Wakeup_Answer = sendAT("","AT");
-
-
-
+         LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
+        // ble_ConnectedResponse = sendAT("","OK");
+         //ble_ConnectedResponse = sendAT("","OK");
+               ble_NameResponse = sendAT("","AT+NAME?");
+               ble_ConnectedResponse = sendAT("","AT");
+         if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return true; // Already setup AND responsive
         }
 
-      if(digitalRead(BLEState) == HIGH)  return true;
-      if(Wakeup_Answer == "OK")  return true;
-      if (i_wakeup>=MAX_BLE_WAITx8) return false;
+      if(ble_ConnectedResponse == "OK")  return true;
       return false;
 }
 
@@ -755,47 +739,17 @@ String Build_Packet(float glucose) {
 bool Send_Packet(String packet) {
    if ((packet.substring(0,1) != "0"))
     {
-Serial.print("SendPacket");
-//restartBLE();
-//String sendedData = sendAT("","AT");
- //sendedData = sendAT("","AT");
- //restartBLE();
- String AData= "";
- String BData= "";
-// int g = 0;
- for ( int i=0;  i <= 3;i++) {
-// g = 0;
-
-   AData = sendAT("","AT");
-   ble_Seril.print(packet);
-   delay(50);
-   ble_Seril.print(packet);
-   delay(50);
-   ble_Seril.print(packet);
-  BData = sendAT("","AT");
- // if(AData == "OK" ) g++;
- // if(BData == "OK") g++;
- delay(100);
- 
- sendAT("","AT+RESET");
- delay(100);
-}
-
-       // sendAT(packet,"");
-      // sendAT(packet,"");
+   ble_Seril.print(packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" "));
+   Serial.print("SendPacket");
+      sendAT(packet,"");
+      sendAT(packet,"");
       Serial.println("");
       Serial.print("xDrip packet: ");
       Serial.print(packet);
       Serial.println("");
-      delay(1000);
-
-      //delay(1000);//LL20 von 1000
-      //LL26 just have to wait for ble to finish transaction or implement an sophisticated way to wait for ack,which would need an powered up atml.
-      //LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
-if (AData == "OK"  && BData == "OK")    return true;
+      LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
+if ("2" == "OK"  && "2" == "OK")    return true;
     }
-
-
      Serial.println("");
      Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
      Serial.println("");
