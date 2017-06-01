@@ -308,12 +308,7 @@ bool BLEState_current=false;
           ble_NameResponse = sendAT("","AT+NAME?");
           ble_ConnectedResponse = sendAT("","AT");
           ble_ConnectedResponse = sendAT("","OK");
-          ble_NameResponse = sendAT("","AT+NAME?");
-          ble_ConnectedResponse = sendAT("","AT");
-          ble_ConnectedResponse = sendAT("","OK");
-         ble_NameResponse = sendAT("","AT+NAME?");
-         ble_ConnectedResponse = sendAT("","AT");
-         ble_ConnectedResponse = sendAT("","OK");
+
          if(digitalRead(BLEState) == HIGH) BLEState_current = true;
 
          Serial.print("BLEState_current " + String( BLEState_current));
@@ -740,19 +735,20 @@ String Build_Packet(float glucose) {
       return packet;
 }
 
-bool Send_Packet(String packet) {
+bool Send_Packet(String packet) { //LL47 is only invoked  if (digitalRead(BLEState) == HIGH)
    if ((packet.substring(0,1) != "0"))
     {
    ble_Seril.print(packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" "));
    Serial.print("SendPacket");
-      sendAT(packet,"");
-      sendAT(packet,"");
+    //  sendAT(packet,"");
+    //  sendAT(packet,"");
       Serial.println("");
       Serial.print("xDrip packet: ");
       Serial.print(packet);
       Serial.println("");
-      LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
-if ("2" == "OK"  && "2" == "OK")    return true;
+    if (digitalRead(BLEState) == HIGH)  {LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
+      //LL47 if the BLEState Pin is up at the beginnening,after the ble print and after 1second time, it should have succeded
+   if (digitalRead(BLEState) == HIGH)return true;}
     }
      Serial.println("");
      Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
