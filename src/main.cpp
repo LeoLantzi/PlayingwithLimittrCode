@@ -300,13 +300,14 @@ delay(500);
       ble_NameResponse = sendAT("","AT+NAME?");
       ble_NameResponse = sendAT("","AT+NAME?");
       ble_ConnectedResponse = sendAT("","AT");
+       if(digitalRead(BLEState) == HIGH) Serial.println("BLEState) == HIGH");
 if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return true; // Already setup AND responsive
           }
 
     if( ble_NameResponse!= "OK+Get:Leonhard" ){  setupHM17();          }
 
         int i_wakeup=0;
-          for (i_wakeup=0; (ble_ConnectedResponse != "OK") && (digitalRead(BLEState) != HIGH)   &&  (i_wakeup < 100) ; i_wakeup++)
+          for (i_wakeup=0; (ble_ConnectedResponse != "OK") && (digitalRead(BLEState) != HIGH)   &&  (i_wakeup < 160) ; i_wakeup++)
         {
          Serial.print("Waiting for BLE connection ...");
          LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
@@ -314,6 +315,7 @@ if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return
          //ble_ConnectedResponse = sendAT("","OK");
                ble_NameResponse = sendAT("","AT+NAME?");
                ble_ConnectedResponse = sendAT("","AT");
+               if(digitalRead(BLEState) == HIGH) Serial.println("BLEState) == HIGH");
          if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK") return true; // Already setup AND responsive
         }
 
