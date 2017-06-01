@@ -30,7 +30,7 @@
 
 #define MIN_V 3150 // battery empty level
 #define MAX_V 3850 // battery full level
-#define MAX_BLE_WAITx8 5 // Maximum bluetooth re-connect time 4x8=32+ seconds
+#define MAX_BLE_WAITx8 6 // Maximum bluetooth re-connect time 4x8=32+ seconds
 #define SLEEP_TIME 37 // SleepTime in 37x8 seconds = 4 min 56 seconds
 #define MAX_NFC_READTRIES 2 // Amount of tries for every nfc block-scan
 
@@ -45,10 +45,10 @@ const int NFCPin3 = 4; // Power pin BM019
 
 const int BLEPin = 3; // BLE power pin.
 const int BLEState = 2; // BLE connection state pin
-const int BLE_RX = 5; //!!!!!!!!!!!!!!!!! 5
+const int BLE_RX =5; //!!!!!!!!!!!!!!!!! 5
 const int BLE_TX = 6;//!!!!!!!!!!!!!!!!!! 6
 
-
+// search replace Serial.p Serial.b without //
 bool startHM17() ;//schaltet pins, wartet auf connection
 bool endHM17();//pin power off
 bool FirstRunHM17 = true; // config HM-17 NAME and BLEState
@@ -61,7 +61,7 @@ bool RC;
 bool HM17= false;
 bool BM019 =false;
 int ERROR_READS; //How many error tries occured, higher longer sleep
-String sendAT(char ); // function to send AT commands to BLE chip
+String sendAT(String, char ); // function to send AT commands to BLE chip
 
 //NFC Antenna http://www.antenna-theory.com/definitions/nfc-antenna.php
 
@@ -80,26 +80,28 @@ float trend[16];
 SoftwareSerial ble_Seril(BLE_RX, BLE_TX); // RX | TX
 
 
-String sendAT(char BLE_Command[])
+String sendAT(String packet, char BLE_Command[])
 {
 
   int i_counter=0;
 
   String string_Answer="";
-  Serial.println("XXX" + string_Answer + "XXX");
+ Serial.println("XXX" + string_Answer + "XXX");
 
   delay(100);
-  ble_Seril.write(BLE_Command);
-ble_Seril.listen();
+  ble_Seril.listen();
+  if(packet=="") ble_Seril.write(BLE_Command);
+  if(packet!="") ble_Seril.print(packet);
 
-  delayMicroseconds(500);
+
+  delayMicroseconds(100);
 
   while(ble_Seril.available() <= 0 ){
 
 //LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
-      if (i_counter > 10000) //LL18 war 5000
+      if (i_counter > (20000)) //LL18 war 5000
       {
-        Serial.println(String(BLE_Command) + ": " + i_counter);
+       Serial.println(String(BLE_Command) + ": " + i_counter);
             return String(i_counter);
       }
       delayMicroseconds(100); //LL18 500
@@ -123,7 +125,7 @@ return string_Answer;
 
 void setup() {
 
-    Serial.begin(9600);
+   Serial.begin(9600);
     delay(100);
     endHM17();
     endHM17();
@@ -132,7 +134,7 @@ void setup() {
 }
 
 bool startBM019(){
-  Serial.println("startBM019");
+ Serial.println("startBM019");
   pinMode(IRQPin, OUTPUT);
   digitalWrite(IRQPin, HIGH);
   pinMode(SSPin, OUTPUT);
@@ -182,7 +184,93 @@ SPI.end();
   digitalWrite(IRQPin, LOW);
   return true;
 }
+void restartBLE() {
+  pinMode(BLEState, INPUT);
+  pinMode(BLEPin, OUTPUT);
+    digitalWrite(BLEPin, HIGH);
+    digitalWrite(5, HIGH);
+    digitalWrite(6, HIGH);
+    delay(500);
+    ble_Seril.write("AT+RESET");
+    delay(500);
+}
+void setupHM17(){
+  sendAT("","AT+VERS?");
+  sendAT("","AT+VERR?");
+  //String HM_Name = sendAT("","AT+NAME?");
+  // HM11 !HM_Name.startsWith("OK+NAME:Leonhard")
+  //HM17!HM_Name.startsWith("OK+GET:Leonhard")
+  //if(!HM_Name.startsWith("OK+Get:Leonhard")) {
+          sendAT("","AT+RENEW");
+          sendAT("","AT+RESET");
+          delay(500);
+          digitalWrite(BLEPin, LOW);
+          delay(500);
+          digitalWrite(BLEPin, HIGH);
+          delay(100);
+          sendAT("","AT+NAMELeonhard");
+          sendAT("","AT+VERS?");
+          sendAT("","AT+VERR?");
+          sendAT("","AT+NAME?");
+          sendAT("","AT+NAMELeonhard");
+sendAT("","AT+PIO1?");
+                sendAT("","AT+PIO11"); // on connection BLEState durable light not blinking
 
+
+                // 45. Query/Set Module Power
+                // Send Receive Parameter
+                // AT+POWE? OK+Get:<P1> None
+                // AT+POWE <P1> OK+Set:<P1> Para: 0 ~ 7
+                // 0: -18dbm
+                // 1: -12dbm
+                // 2: -6dbm
+                // 3: -3dbm
+                // 4: -2dbm
+                // 5: -1dbm
+                // 6: 0dbm
+                // 7: 3dbm
+                // Default: 6
+                sendAT("","AT+RELI?");
+                sendAT("","AT+RELI0");
+                // 46. Query/Set reliable advertising mode
+                // Send Receive Parameter
+                // AT+RELI? OK+ Get:<P1>
+                // AT+RELI<P1> OK+ Set:<P1>
+                // Para1: 0, 1
+                // 0: Normal advertising
+                // 1: Reliable advertising
+                // Default: 0
+                //       52. Query/Set BLE talk method
+          // Send Receive Parameter
+          // AT+RESP? OK+Get:<P1> None
+          // AT+RESP<P1> OK+Set:<P1> Para1: 0, 1, 2
+          // 0: Writewithoutresponse
+          // 1: Writewithresponse
+          // 2: Both 0 and 1
+          // Default: 0
+          sendAT("","AT+RESP?");
+          sendAT("","AT+RESP1");//LL35
+          // 53. Query/Set PIO0 function (System KEY)
+          // Send Receive Parameter
+          // AT+SYSK? OK+Get:[P]
+          // AT+SYSK[P] OK+Set:[P]
+          // Para1: 0, 1
+          // 0: Only cancel operate,
+          // 1: When module is
+          // standby, restore factory
+          // setting.
+          // Default: 1
+          sendAT("", "AT+PWRM?");
+
+//}
+sendAT("","AT+RESET");
+delay(500);
+digitalWrite(BLEPin, LOW);
+delay(500);
+digitalWrite(BLEPin, HIGH);
+delay(100);
+sendAT("","AT+RESET");
+}
 bool startHM17() {
   // const int BLEPin = 3; // BLE power pin.
   // const int BLEState = 2; // BLE connection state pin
@@ -190,99 +278,63 @@ bool startHM17() {
   // const int BLE_TX = 6;
   //endHM17(); // strange i know
   //endHM17();
-  Serial.println("startHM17");
-  pinMode(BLEPin, OUTPUT);
-  digitalWrite(BLEPin, HIGH);
-  pinMode(BLEState, INPUT);
-  delay(100);
+ Serial.println("startHM17");
+  restartBLE();
+  //LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
 
-ble_Seril.begin(9600);
 //ble_Seril.begin(9600);
-    //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
-  //  delay(100);
-    //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+ble_Seril.begin(9600);
+sendAT("","AT+RESET");
+ String ble_answer_2 = sendAT("","AT+NAME?");
+ String Wakeup_Answer = sendAT("","AT");
+// delay(100);
+for(int i= 0; !ble_answer_2.startsWith("OK") && i <= 40; i++) {
+sendAT("","AT+RESET");
+delay(500);
+digitalWrite(BLEPin, LOW);
+delay(1000);
+           //LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
 
-//sendAT("AT+VERS?");
-    if(FirstRunHM17 == true){
-      //ok hm11 chips needs bit more time than hm17, so 2 more wakeups and a delay
-    //  sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
-    //  delay(100);
-      //sendAT("wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17wakeupHM17");
+           digitalWrite(BLEPin, HIGH);
+sendAT("","AT");
+           delay(1000);
+      ble_answer_2 = sendAT("","AT+NAME?");
 
-      sendAT("AT+VERS?");
-      sendAT("AT+VERR?");
-      sendAT("AT+NAME?");
-      String HM_Name = sendAT("AT+NAME?");
-      if(!HM_Name.startsWith("OK+NAME:Leonhard")) {
-              sendAT("AT+RENEW");
-              sendAT("AT+RESET");
-              delay(500);
-              digitalWrite(BLEPin, LOW);
-              delay(500);
-              digitalWrite(BLEPin, HIGH);
-              delay(100);
-              sendAT("AT+VERS?");
-              sendAT("AT+VERR?");
-              sendAT("AT+NAME?");
-              sendAT("AT+NAMELeonhard");
           }
 
-      sendAT("AT+PIO11"); // on connection BLEState durable light not blinking
-
-
-      // 45. Query/Set Module Power
-      // Send Receive Parameter
-      // AT+POWE? OK+Get:<P1> None
-      // AT+POWE <P1> OK+Set:<P1> Para: 0 ~ 7
-      // 0: -18dbm
-      // 1: -12dbm
-      // 2: -6dbm
-      // 3: -3dbm
-      // 4: -2dbm
-      // 5: -1dbm
-      // 6: 0dbm
-      // 7: 3dbm
-      // Default: 6
-      sendAT("AT+POWE3");
-      // 46. Query/Set reliable advertising mode
-      // Send Receive Parameter
-      // AT+RELI? OK+ Get:<P1>
-      // AT+RELI<P1> OK+ Set:<P1>
-      // Para1: 0, 1
-      // 0: Normal advertising
-      // 1: Reliable advertising
-      // Default: 0
-      //       52. Query/Set BLE talk method
-// Send Receive Parameter
-// AT+RESP? OK+Get:<P1> None
-// AT+RESP<P1> OK+Set:<P1> Para1: 0, 1, 2
-// 0: Writewithoutresponse
-// 1: Writewithresponse
-// 2: Both 0 and 1
-// Default: 0
-sendAT("AT+RESP1");
+Wakeup_Answer =sendAT("","AT");
+    if(ble_answer_2.startsWith("OK+Get:xxx") || ble_answer_2.startsWith("OK+GET:HMSoft") || ble_answer_2.startsWith("OK+Get:HMSoft")){
+  setupHM17();
+          }
 
       FirstRunHM17 = false;
-    }
+
 
     int i_wakeup=0;
-        for (i_wakeup=0; ( (i_wakeup < MAX_BLE_WAITx8) && (digitalRead(BLEState) != HIGH) ); i_wakeup++)
+    //at the momemt probs with light state
+        for (i_wakeup=0; (Wakeup_Answer != "OK") && (digitalRead(BLEState) != HIGH)   &&  (i_wakeup < MAX_BLE_WAITx8) ; i_wakeup++)
         {
 delay(10);
-          Serial.print("Waiting for BLE connection ...");
-          Serial.println("");
+         Serial.print("Waiting for BLE connection ...");
+         Serial.println("");
+
           //LL  power save mode to keep ble power pin up, but atmel down.
           goToSleep( 1); // 8 Seconds * MAX_BLE_WAITx8 = Seconds
-        //  delay(1000);
+        // delay(500);
         //with HM-11 8,5mA with HM17 5,05mA while waiting
         //bonding/pairing neither HM11 or HM17 working for me
         //HM11: HMSoft V545
 
+        Wakeup_Answer = sendAT("","AT");
 
-if (i_wakeup>=MAX_BLE_WAITx8) return false;
+
+
         }
-      if(digitalRead(BLEState) != HIGH)  return false;
-      return true;
+
+      if(digitalRead(BLEState) == HIGH)  return true;
+      if(Wakeup_Answer == "OK")  return true;
+      if (i_wakeup>=MAX_BLE_WAITx8) return false;
+      return false;
 }
 
 bool endHM17(){
@@ -308,10 +360,11 @@ bool SetProtocol_Command() {
 
   digitalWrite(SSPin, LOW);
 
-  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000001L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+if (i==100000000L) return false;
   }
   digitalWrite(SSPin, HIGH);
   delay(1);
@@ -324,13 +377,13 @@ bool SetProtocol_Command() {
 
   if ((RXBuffer[0] == 0) & (RXBuffer[1] == 0))  // is response code good?
     {
-    Serial.println("Protocol Set Command OK");
+   Serial.println("Protocol Set Command OK");
     NFCReady = 1; // NFC is ready
     return  true; // NFC is ready
     }
   else
     {
-    Serial.println("Protocol Set Command FAIL");
+   Serial.println("Protocol Set Command FAIL");
     NFCReady = 0; // NFC not ready
     return  false; // NFC not ready
     }
@@ -355,10 +408,11 @@ bool Inventory_Command() {
 
   digitalWrite(SSPin, LOW);
 
-     for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
+     for (long i; (RXBuffer[0] != 8 ) && (i < 100000001L);i++)
        {
        RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
        RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+if (i==100000000L) return false;
      }
 
   digitalWrite(SSPin, HIGH);
@@ -375,13 +429,13 @@ bool Inventory_Command() {
 
   if (RXBuffer[0] == 128)  // is response code good?
     {
-    Serial.println("Sensor in range ... OK");
+   Serial.println("Sensor in range ... OK");
     NFCReady = 2;
     return  true;
     }
   else
     {
-    Serial.println("Sensor out of range");
+   Serial.println("Sensor out of range");
       NFCReady = 1;
     return  false;
     }
@@ -420,10 +474,11 @@ float Read_Memory() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000001L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+if (i==100000000L) return false;
   }
 
   digitalWrite(SSPin, HIGH);
@@ -454,7 +509,7 @@ float Read_Memory() {
   pout[0] = 0;
   if (!readError)       // is response code good?
   {
-    Serial.println(str);
+   Serial.println(str);
     trendValues += str;
   }
   readTry++;
@@ -475,10 +530,11 @@ float Read_Memory() {
   delay(1);
 
   digitalWrite(SSPin, LOW);
-  for (long i; (RXBuffer[0] != 8 ) && (i < 100000000L);i++)
+  for (long i; (RXBuffer[0] != 8 ) && (i < 100000001L);i++)
     {
     RXBuffer[0] = SPI.transfer(0x03);  // Write 3 until
     RXBuffer[0] = RXBuffer[0] & 0x08;  // bit 3 is set
+    if (i==100000000L) return false;
   }
   digitalWrite(SSPin, HIGH);
   delay(1);
@@ -518,10 +574,10 @@ float Read_Memory() {
       sensorMinutesElapse = strtoul(hexMinutes.c_str(), NULL, 16);
       glucosePointer = strtoul(hexPointer.c_str(), NULL, 16);
 
-      Serial.println("");
-      Serial.print("Glucose pointer: ");
-      Serial.print(glucosePointer);
-      Serial.println("");
+     Serial.println("");
+     Serial.print("Glucose pointer: ");
+     Serial.print(glucosePointer);
+     Serial.println("");
 
       int ii = 0;
       for (int i=8; i<=200; i+=12) {
@@ -645,7 +701,7 @@ float Read_Memory() {
     }
   else
     {
-    Serial.print("Read Memory Block Command FAIL");
+   Serial.print("Read Memory Block Command FAIL");
     NFCReady = 0;
     readError = 0;
     }
@@ -670,53 +726,81 @@ String Build_Packet(float glucose) {
 
       packet += ' ';
       packet += String(sensorMinutesElapse);
-      Serial.println("");
-      Serial.print("Glucose level: ");
-      Serial.print(glucose);
-      Serial.println("");
-      Serial.print("15 minutes-trend: ");
-      Serial.println("");
+     Serial.println("");
+     Serial.print("Glucose level: ");
+     Serial.print(glucose);
+     Serial.println("");
+     Serial.print("15 minutes-trend: ");
+     Serial.println("");
       for (int i=0; i<16; i++)
       {
-        Serial.print(trend[i]);
-        Serial.println("");
+       Serial.print(trend[i]);
+       Serial.println("");
       }
-      Serial.print("Battery level: ");
-      Serial.print(batteryPcnt);
-      Serial.print("%");
-      Serial.println("");
-      Serial.print("Battery mVolts: ");
-      Serial.print(batteryMv);
-      Serial.print("mV");
-      Serial.println("");
-      Serial.print("Sensor lifetime: ");
-      Serial.print(sensorMinutesElapse);
-      Serial.print(" minutes elapsed");
-      Serial.println("");
+     Serial.print("Battery level: ");
+     Serial.print(batteryPcnt);
+     Serial.print("%");
+     Serial.println("");
+     Serial.print("Battery mVolts: ");
+     Serial.print(batteryMv);
+     Serial.print("mV");
+     Serial.println("");
+     Serial.print("Sensor lifetime: ");
+     Serial.print(sensorMinutesElapse);
+     Serial.print(" minutes elapsed");
+     Serial.println("");
       return packet;
 }
 
 bool Send_Packet(String packet) {
    if ((packet.substring(0,1) != "0"))
     {
+Serial.print("SendPacket");
+//restartBLE();
+//String sendedData = sendAT("","AT");
+ //sendedData = sendAT("","AT");
+ //restartBLE();
+ String AData= "";
+ String BData= "";
+// int g = 0;
+ for ( int i=0;  i <= 3;i++) {
+// g = 0;
+
+   AData = sendAT("","AT");
+   ble_Seril.print(packet);
+   delay(50);
+   ble_Seril.print(packet);
+   delay(50);
+   ble_Seril.print(packet);
+  BData = sendAT("","AT");
+ // if(AData == "OK" ) g++;
+ // if(BData == "OK") g++;
+ delay(100);
+ 
+ sendAT("","AT+RESET");
+ delay(100);
+}
+
+       // sendAT(packet,"");
+      // sendAT(packet,"");
       Serial.println("");
       Serial.print("xDrip packet: ");
       Serial.print(packet);
       Serial.println("");
-      ble_Seril.print(packet);
+      delay(1000);
+
       //delay(1000);//LL20 von 1000
       //LL26 just have to wait for ble to finish transaction or implement an sophisticated way to wait for ack,which would need an powered up atml.
-      LowPower.powerDown(SLEEP_4S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
+      //LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
+if (AData == "OK"  && BData == "OK")    return true;
+    }
 
-      return true;
-    }
-   else
-    {
-      Serial.println("");
-      Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
-      Serial.println("");
+
+     Serial.println("");
+     Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
+     Serial.println("");
       return false;
-    }
+
   }
 
 int readVcc() {
@@ -747,7 +831,7 @@ int readVcc() {
 }
 
 void goToSleep( int time) {
-  Serial.println("goToSleep!" + String(time));
+ Serial.println("goToSleep!" + String(time));
   delay(100); //LL direct powerdown sleep after serial data, hangs Atom serial software?
 
  for (int i=0; i<time; i++) {
@@ -773,10 +857,10 @@ void lowBatterySleep() {
  digitalWrite(6, LOW);
  digitalWrite(BLEPin, LOW);
 
- Serial.print("Battery low! LEVEL: ");
- Serial.print(batteryPcnt);
- Serial.print("%");
- Serial.println("");
+Serial.print("Battery low! LEVEL: ");
+Serial.print(batteryPcnt);
+Serial.print("%");
+Serial.println("");
  delay(100);
 
  // Switch LED on and then off shortly
@@ -803,13 +887,13 @@ bool runBM019(){
   startBM019();
   delay(200);
 
-  Serial.println("RC==" + String(RC));
+ Serial.println("RC==" + String(RC));
   if(RC==true){Serial.println("SetProtocol_Command");
   RC = SetProtocol_Command();}
 
   if(RC==true){
         for(int i=0; i<3;i++) {
-            Serial.println("Inventory_Command");
+           Serial.println("Inventory_Command");
             delay(100);
               RC = Inventory_Command();
               if (RC == true) i = 4;
@@ -818,7 +902,7 @@ bool runBM019(){
 
 
   if(RC==true)  {
-          Serial.println("xdripPacket");
+         Serial.println("xdripPacket");
           xdripPacket = Build_Packet(Read_Memory());
           return true;
   }
@@ -828,7 +912,7 @@ return false;
 void loop() {
 
   batteryPcnt = readVcc();
-  Serial.println(batteryPcnt);
+ Serial.println(batteryPcnt);
   if (batteryPcnt < 1) {
     batteryLow = 1;
     endBM019();
@@ -850,7 +934,7 @@ NFCReady = 0;
 
 // if last try for BLE connection didnt succed, try BLE first, only if ok then run NFC reading first.
 
-if(HM17==false ){
+if(HM17==false ){ //LL34 false
     HM17 = startHM17();
         if(HM17==true){
             BM019 = runBM019();
@@ -886,8 +970,9 @@ if(RC==true) { // if current try was ok, to to sleep for normal ca 5min
     }
 if(RC==false) { // if current try didnt succed, then sleep for 24,48,72,96,120,144,168, 192,216
       ERROR_READS++;
-      if(ERROR_READS <= 9) goToSleep( 3*ERROR_READS);
+       if(ERROR_READS <= 9) goToSleep( 2*ERROR_READS);
       if(ERROR_READS > 9) goToSleep( SLEEP_TIME);
+
     }
 
 
