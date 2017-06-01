@@ -295,23 +295,30 @@ sendAT("","AT+RESET");
 bool BLEState_current=false;
                   for (int i_wakeup=0; (i_wakeup < 160) ; i_wakeup++)
         {
-          Serial.print("Waiting for BLE OK ...");
-          digitalWrite(BLEPin, LOW);
-          LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
-          digitalWrite(BLEPin, HIGH);
-          delay(500);
-          sendAT("","AT+RESET");
+          Serial.println("Waiting for BLE OK ...");
+          delay(50);
+          if(digitalRead(BLEState) == LOW)   BLEState_current = false;
+          if(BLEState_current == false)   digitalWrite(BLEPin, LOW);
+            LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
+          if(BLEState_current == false)    digitalWrite(BLEPin, HIGH);
+                delay(500);
+            if(BLEState_current == false)      sendAT("","AT+RESET");
+
+     sendAT("","AT+RESET");
           ble_NameResponse = sendAT("","AT+NAME?");
           ble_ConnectedResponse = sendAT("","AT");
+          ble_ConnectedResponse = sendAT("","OK");
           ble_NameResponse = sendAT("","AT+NAME?");
           ble_ConnectedResponse = sendAT("","AT");
+          ble_ConnectedResponse = sendAT("","OK");
          ble_NameResponse = sendAT("","AT+NAME?");
          ble_ConnectedResponse = sendAT("","AT");
+         ble_ConnectedResponse = sendAT("","OK");
          if(digitalRead(BLEState) == HIGH) BLEState_current = true;
-        // if(digitalRead(BLEState) == LOW) BLEState_current = false;
+
          Serial.print("BLEState_current " + String( BLEState_current));
          delay(50);
-         if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK" && BLEState_current == true) return true; // Already setup AND responsive
+         if ( BLEState_current == true) return true; // Already setup AND responsive
          if( ble_NameResponse== "OK+Get:HMSoft" ){  setupHM17();          }
         }
 
