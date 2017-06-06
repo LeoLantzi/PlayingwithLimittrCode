@@ -209,7 +209,8 @@ void setupHM17(){
           digitalWrite(BLEPin, LOW);
           delay(500);
           digitalWrite(BLEPin, HIGH);
-          delay(100);
+          delay(500);
+
           sendAT("","AT+NAMELeonhard");
           sendAT("","AT+VERS?");
           sendAT("","AT+VERR?");
@@ -282,26 +283,31 @@ bool startHM17() {
  Serial.println("startHM17");
  endHM17();
   restartBLE();
+  //return true;
   //LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF);
+
 if(testhm17==true)setupHM17();
 ble_Seril.begin(9600);
 sendAT("","AT+RESET");
 
   String ble_NameResponse = sendAT("","AT+NAME?");
   String ble_ConnectedResponse = sendAT("","AT");
-
+//seems wrong, only the first AT gives sometimes OK, after connection no AT commands. means = 20001
   if (ble_NameResponse== "OK+Get:Leonhard"&& ble_ConnectedResponse == "OK" && digitalRead(BLEState) == HIGH) return true; // Already setup AND responsive
+//maybe
+//  if (digitalRead(BLEState) == HIGH && ble_NameResponse== "20001"&& ble_ConnectedResponse == "20001"  ) return true; // Already setup AND responsive
 
 bool BLEState_current=false;
-                  for (int i_wakeup=0; (i_wakeup < 160) ; i_wakeup++)
+                  for (int i_wakeup=0; (i_wakeup < 90) ; i_wakeup++)
         {
           Serial.println("Waiting for BLE OK ...");
           delay(50);
           if(digitalRead(BLEState) == LOW)   BLEState_current = false;
+          //if(digitalRead(BLEState) == HIGH)  BLEState_current = true;
           if(BLEState_current == false)   digitalWrite(BLEPin, LOW);
             LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF);
           if(BLEState_current == false)    digitalWrite(BLEPin, HIGH);
-                delay(500);
+              LowPower.powerDown(SLEEP_500MS, ADC_OFF, BOD_OFF); //LL48  delay(500);
             if(BLEState_current == false)      sendAT("","AT+RESET");
 
      sendAT("","AT+RESET");
@@ -314,7 +320,7 @@ bool BLEState_current=false;
          Serial.print("BLEState_current " + String( BLEState_current));
          delay(50);
          if ( BLEState_current == true) return true; // Already setup AND responsive
-         if( ble_NameResponse== "OK+Get:HMSoft" ){  setupHM17();          }
+         if( ble_NameResponse!= "OK+Get:Leonhard" ){  setupHM17();          }
         }
 
       return false;
@@ -738,7 +744,7 @@ String Build_Packet(float glucose) {
 bool Send_Packet(String packet) { //LL47 is only invoked  if (digitalRead(BLEState) == HIGH)
    if ((packet.substring(0,1) != "0"))
     {
-   ble_Seril.print(packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" ") += packet += String(" "));
+   ble_Seril.print(packet += String(" ") += packet += String(" "));
    Serial.print("SendPacket");
     //  sendAT(packet,"");
     //  sendAT(packet,"");
@@ -917,15 +923,16 @@ else{ // HM17==true
 
 
     //if(batteryPcnt<=80) digitalWrite(14, LOW);
-
+//delay(4000);
 if(RC==true) { // if current try was ok, to to sleep for normal ca 5min
       goToSleep( SLEEP_TIME);
     ERROR_READS=0;
     }
 if(RC==false) { // if current try didnt succed, then sleep for 24,48,72,96,120,144,168, 192,216
       ERROR_READS++;
+
        if(ERROR_READS <= 9) goToSleep( 2*ERROR_READS);
-      if(ERROR_READS > 9) goToSleep( SLEEP_TIME);
+       if(ERROR_READS > 9) goToSleep( SLEEP_TIME);
 
     }
 
