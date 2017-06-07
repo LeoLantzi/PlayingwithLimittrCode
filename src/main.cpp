@@ -322,7 +322,8 @@ bool BLEState_current=false;
          Serial.print("BLEState_current " + String( BLEState_current));
          delay(50);
          if ( BLEState_current == true) return true; // Already setup AND responsive
-         if( ble_NameResponse!= "OK+Get:Leonhard" ){  setupHM17();          }
+         //HM17 HM11
+         if( !ble_NameResponse.startsWith( "OK+Get:Leonhard") && !ble_NameResponse.startsWith( "OK+NAME:Leonhard")){  setupHM17();          }
         }
 
       return false;
@@ -684,8 +685,11 @@ if (i==100000000L) return false;
     NFCReady = 2;
     FirstRun = 0;
 
-    if (noDiffCount > 3)// LL original was 5, means if over 5*5min value was the same then error, my feeling goes with 3
+    if (noDiffCount > 3){
+      ERRORCODE = 5; // Expired Sensor
       return 0;
+    }// LL original was 5, means if over 5*5min value was the same then error, my feeling goes with 3
+
     else
       return shownGlucose;
 
@@ -695,6 +699,7 @@ if (i==100000000L) return false;
    Serial.print("Read Memory Block Command FAIL");
     NFCReady = 0;
     readError = 0;
+    ERRORCODE = 6; // Read Memory Block Command FAIL
     }
     return 0;
  }
@@ -748,21 +753,29 @@ packet += ERRORCODE;
 bool Send_Packet(String packet) { //LL47 is only invoked  if (digitalRead(BLEState) == HIGH)
    if ((packet.substring(0,1) != "0"))
     {
-   ble_Seril.print(packet += String(" ") += packet += String(" "));
-   Serial.print("SendPacket");
-    //  sendAT(packet,"");
-    //  sendAT(packet,"");
+   ble_Seril.print(packet += String(" ") ); //+= packet += String(" ") one packet should be ok.
+      Serial.print("SendPacket");
       Serial.println("");
       Serial.print("xDrip packet: ");
       Serial.print(packet);
       Serial.println("");
+    }
+    else{
+      packet = String("ERR 916 ") + String(batteryPcnt) + ' ' + String("30000") + String(" ");
+     //+= packet += String(" ") one packet should be ok.
+
+      ble_Seril.print(packet);
+        Serial.print("SendPacket");
+         Serial.println("");
+         Serial.print("xDrip packet: ");
+         Serial.print(packet);
+         Serial.println("");
+    }
+
+
     if (digitalRead(BLEState) == HIGH)  {LowPower.powerDown(SLEEP_1S, ADC_OFF, BOD_OFF); // ble up, atmel not needed -> down.
       //LL47 if the BLEState Pin is up at the beginnening,after the ble print and after 1second time, it should have succeded
    if (digitalRead(BLEState) == HIGH)return true;}
-    }
-     Serial.println("");
-     Serial.print("Packet not sent! Maybe a corrupt scan or an expired sensor.");
-     Serial.println("");
       return false;
 
   }
@@ -853,7 +866,8 @@ bool runBM019(){
 
  Serial.println("RC==" + String(RC));
   if(RC==true){Serial.println("SetProtocol_Command");
-  RC = SetProtocol_Command();}
+  RC = SetProtocol_Command();
+if(RC==false){ERRORCODE = 3;}} // Error in SetProtocol_Command
 
   if(RC==true){
         for(int i=0; i<3;i++) {
@@ -861,7 +875,8 @@ bool runBM019(){
             delay(100);
               RC = Inventory_Command();
               if (RC == true) i = 4;
-        }
+                      }
+        if(RC==false){ERRORCODE = 4;} //Error in Inventory_Command
   }
 
 
@@ -870,7 +885,8 @@ bool runBM019(){
           xdripPacket = Build_Packet(Read_Memory());
           return true;
   }
-return false;
+  xdripPacket = Build_Packet(0);
+    return false;
 }
 
 void loop() {
@@ -895,6 +911,7 @@ void loop() {
   }
 RC=true;
 NFCReady = 0;
+ERRORCODE = 2;
 
 // if last try for BLE connection didnt succed, try BLE first, only if ok then run NFC reading first.
 
@@ -915,13 +932,16 @@ else{ // HM17==true
       BM019 = runBM019();
       endBM019();
       endBM019();
-      if(BM019==true){
+      //try ble connectioneven if nfc not ok do deliver error codes
+      //if(BM019==true){
               HM17 = startHM17();
               if(HM17==true) RC = Send_Packet(xdripPacket);
               endHM17();
               endHM17();
-      }
-  else {RC = false;}
+      //}
+  //else {RC = false;}
+  if(!BM019) RC = false;
+  if(!HM17) RC = false;
 }
 
 
