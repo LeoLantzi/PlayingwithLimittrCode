@@ -62,6 +62,7 @@ bool HM17= false;
 bool BM019 =false;
 int ERROR_READS; //How many error tries occured, higher longer sleep
 String sendAT(String, char ); // function to send AT commands to BLE chip
+int ERRORCODE = 2;// the 2 of fe "216" xdrippacket
 
 //NFC Antenna http://www.antenna-theory.com/definitions/nfc-antenna.php
 
@@ -233,6 +234,7 @@ sendAT("","AT+PIO1?");
                 // 6: 0dbm
                 // 7: 3dbm
                 // Default: 6
+                sendAT("","AT+POWE?");
                 sendAT("","AT+RELI?");
                 sendAT("","AT+RELI0");
                 sendAT("","AT+PASS?");
@@ -707,8 +709,10 @@ String Build_Packet(float glucose) {
       String packet = "";
       packet = String(raw);
       packet += ' ';
-      if (noDiffCount > 0) packet += "205"; //warning for expird sensor. Dont understand the xdrip code 205,206,209 all result in low transmitter battery. But at least a message.
-      if (noDiffCount == 0) packet += "216"; //     sensor_battery_level = 216; //no message, just system status "OK"
+packet += ERRORCODE;
+      if (noDiffCount > 0) packet += "05"; //205 warning for expird sensor. Dont understand the xdrip code 205,206,209 all result in low transmitter battery. But at least a message.
+      if (noDiffCount == 0) packet += "16"; // 216    sensor_battery_level = 216; //no message, just system status "OK"
+
       packet += ' ';
 //if (noDiffCount > 0) batteryPcnt = batteryPcnt*100; //warning for expird sensor
       packet += String(batteryPcnt);
